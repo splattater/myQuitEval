@@ -26,9 +26,9 @@ class QueryLogExecuter:
         self.logFile = os.path.join(self.logDir, logFile)
 
         try:
-            response = requests.post(endpoint, data={'query': 'SELECT * WHERE {?s ?p ?o} LIMIT 1'}, headers={'Accept': 'application/json'})
+            response = requests.post(self.endpoint, data={'query': 'SELECT * WHERE {graph <urn:bsbm> {?s ?p ?o} } LIMIT 1'}, headers={'Accept': 'application/json'})
         except Exception:
-            raise Exception('Cannot access {}'.endpoint)
+            raise Exception('Cannot access {}'.format(endpoint))
 
         if response.status_code == 200:
             pass
@@ -57,7 +57,6 @@ class QueryLogExecuter:
                     elif write is True:
                         query.append(line)
 
-        # print('Found {} queries'.format(len(queries)))
         self.queries = queries
 
     def runQueries(self):
@@ -140,21 +139,6 @@ class MonitorThread(threading.Thread):
                 memoryLog.write("{} {} {}\n".format(timestamp, du, mem))
                 time.sleep(1)
         print("Monitor stopped")
-    # print("Monitor Run finished and all resources are closed")
-    # try:
-    #     timestamp = float(round(time.time() * 1000) / 1000)
-    #     try:
-    #         mem = float(psProcess.memory_info().rss) / 1024
-    #     except psutil.NoSuchProcess:
-    #         mem = 0
-    #         try:
-    #             du = self.get_size(self.observedDir)
-    #         except Exception as exc:
-    #             du = 0
-    #             logging.info("{} {} {}\n".format(timestamp, du, mem))
-    #         except Exception as exc:
-    #             print("Monitor exception when writing the last line: {}".format(str(exc)))
-
 
     def get_size(self, start_path='.'):
         total_size = 0
@@ -166,7 +150,6 @@ class MonitorThread(threading.Thread):
                 total_size += os.path.getsize(fp)
                 # self.logger.debug("size {} of {}".format(os.path.getsize(fp), fp))
         return total_size / 1024
-
 
 def getPID(name):
     return int(check_output(["pidof", name]))

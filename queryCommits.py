@@ -22,11 +22,12 @@ class EvalCommits:
             repoDir='',
             logFile='',
             logDir='/var/logs',
-            runs=10):
+            runs=100):
 
         self.endpoint = endpoint
         self.logDir = logDir
         self.logFile = os.path.join(self.logDir, logFile)
+        self.repoDir = repoDir
         try:
             response = requests.post(endpoint, data={'query': self.QUERY}, headers={'Accept': 'application/json'})
         except Exception:
@@ -38,9 +39,9 @@ class EvalCommits:
             raise Exception('Something wrong with sparql endpoint.')
 
         try:
-            self.repo = pygit2.Repository(repoDir)
+            self.repo = pygit2.Repository(self.repoDir)
         except Exception:
-            raise Exception('{} is no repository'.format(repoDir))
+            raise Exception('{} is no repository'.format(self.repoDir))
 
         if isinstance(runs, int):
             self.runs = runs
@@ -54,21 +55,20 @@ class EvalCommits:
             commits[i] = (str(commit.id))
             i += 1
         self.commits = commits
-        self.interval = round(len(commits.items()/100))
+        self.interval = round(len(commits.items())/self.runs)
         print('Found {} commits. Interval will be {}'.format(len(commits.items()), str(self.interval)))
 
     def runBenchmark(self):
-        i = 1
-        results = []
+        i = 0
 
-        while i < self.runs:
+        for pos, ref in self.commits.items():
             with open(self.logFile, 'a') as executionLog:
-                ref = random.choice(self.commits)
-                start, end = self.postRequest(ref)
-                data = [ref, str(end - start), str(start), str(end)]
-                executionLog.write(' '.join(data) + '\n')
-                print(' '.join(data))
-                i = i + 1
+                if pos % self.interval == 0:
+                    start, end = self.postRequest(ref)
+                    data = [str(pos), str(end - start), str(start), str(end), str(ref)]
+                    executionLog.write(' '.join(data) + '\n')
+                    print(' '.join(data))
+                    i = i + 1
 
     def postRequest(self, ref):
         start = datetime.datetime.now()
@@ -77,7 +77,7 @@ class EvalCommits:
             data={'query': self.QUERY},
             headers={'Accept': 'application/json'})
         end = datetime.datetime.now()
-        # print('Query executed on', ref, res.status_code, res.json())
+        print('Result:', res, res.status_code)
         return start, end
 
 
@@ -111,7 +111,7 @@ def parseArgs(args):
     parser.add_argument(
         '-runs', '--runs',
         type=int,
-        default=10)
+        default=100)
 
     parser.add_argument(
         '-R',
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     bm = EvalCommits(
         endpoint=args.endpoint,
         repoDir=args.repodir,
-        logFile= 'eval.commits.log',
+        logFile='eval.commits.log',
         logDir=args.logdir,
         runs=args.runs)
 
@@ -137,6 +137,7 @@ if __name__ == '__main__':
     mon.setstoreProcessAndDirectory(
         pid=args.processid,
         observedDir=args.observeddir)
+
     mon.start()
-    # bm.runBenchmark()
+    bm.runBenchmark()
     mon.stop()

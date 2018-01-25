@@ -47,20 +47,22 @@ class EvalCommits:
         else:
             raise Exception('Expect integer for argument "runs", got {}, {}'.format(runs, type(runs)))
 
+        self.interval = round(self.revisions/self.runs)
+        print('Executing {} queries over {} revisions. Interval will be {}'.format(
+            self.runs, self.revisions, self.interval))
+
     def runBenchmark(self):
         i = 0
-        choices = list(set([0, self.revisions, round(self.revisions/4), round(self.revisions*(3/4))]))
-        print('I will pick from {}'.format(choices))
 
-        while i < self.runs:
+        while i < self.revisions:
+            print('{}/{}'.format(i, self.revisions))
             with open(self.logFile, 'a') as executionLog:
-                ref = str(random.choice(choices))
-                start, end = self.postRequest(ref)
-                data = [ref, str(end - start), str(start), str(end)]
-                executionLog.write(' '.join(data) + '\n')
-                # print(' '.join(data))
+                if i % self.interval == 0:
+                    start, end = self.postRequest(str(i))
+                    data = [str(i), str(end - start), str(start), str(end)]
+                    executionLog.write(' '.join(data) + '\n')
+                    # print(' '.join(data))
                 i = i + 1
-                time.sleep(10)
 
     def postRequest(self, ref):
         query = """SELECT ?s ?p ?o WHERE {{ graph <urn:bsbm> REVISION "{}" {{ ?s ?p ?o }} }} LIMIT 1""".format(ref)
