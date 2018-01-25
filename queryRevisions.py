@@ -27,6 +27,7 @@ class EvalCommits:
         self.endpoint = endpoint
         self.logDir = logDir
         self.logFile = os.path.join(self.logDir, logFile)
+
         try:
             res = requests.post(self.endpoint, data={'query': self.QUERY}, headers={'Accept': 'application/json'})
         except Exception:
@@ -52,17 +53,20 @@ class EvalCommits:
             self.runs, self.revisions, self.interval))
 
     def runBenchmark(self):
-        i = 0
+        choices = [0]
 
+        i = self.interval
         while i < self.revisions:
-            print('{}/{}'.format(i, self.revisions))
+            choices.append(i)
+            i += self.interval
+
+        random.shuffle(choices)
+
+        for i in choices:
             with open(self.logFile, 'a') as executionLog:
-                if i % self.interval == 0:
-                    start, end = self.postRequest(str(i))
-                    data = [str(i), str(end - start), str(start), str(end)]
-                    executionLog.write(' '.join(data) + '\n')
-                    # print(' '.join(data))
-                i = i + 1
+                start, end = self.postRequest(str(i))
+                data = [str(i), str(end - start), str(start), str(end)]
+                executionLog.write(' '.join(data) + '\n')
 
     def postRequest(self, ref):
         query = """SELECT ?s ?p ?o WHERE {{ graph <urn:bsbm> REVISION "{}" {{ ?s ?p ?o }} }} LIMIT 1""".format(ref)
@@ -73,7 +77,7 @@ class EvalCommits:
             data={'query': query},
             headers={'Accept': 'application/json'})
         end = datetime.datetime.now()
-        print('Result:', res, res.status_code)
+        print('Result:', res.status_code)
         # print('Query executed on', ref, res.status_code, res.json())
         return start, end
 
