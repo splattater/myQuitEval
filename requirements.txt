@@ -1,0 +1,7 @@
+GitPython
+memory_profiler
+psutil
+pygit2
+PyYAML
+requests
+argparse
