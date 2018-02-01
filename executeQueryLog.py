@@ -12,18 +12,23 @@ from subprocess import check_output
 class QueryLogExecuter:
     logFile = ''
     commits = []
+    queryLimit = sys.maxsize
 
     def __init__(
             self,
             endpoint='http://localhost:8080/r43ples/sparql',
             logFile='execution.log',
             logDir='/var/logs',
-            queryLog=''):
+            queryLog='',
+            queryLimit=None):
 
         self.endpoint = endpoint
         self.queryLog = queryLog
         self.logDir = logDir
         self.logFile = os.path.join(self.logDir, logFile)
+
+        if isinstance(queryLimit, int):
+            self.queryLimit = queryLimit
 
         try:
             response = requests.post(self.endpoint, data={'query': 'SELECT * WHERE {graph <urn:bsbm> {?s ?p ?o} } LIMIT 1'}, headers={'Accept': 'application/json'})
@@ -45,17 +50,23 @@ class QueryLogExecuter:
             write = False
             queries = []
             query = []
+            i = 0
+            print('queryLimit', self.queryLimit)
             with open(self.queryLog, 'r') as f:
                 for line in f:
-                    line = line.strip()
-                    if line.startswith('Query string:'):
-                        write = True
-                        query = []
-                    elif line.startswith('Query result'):
-                        write = False
-                        queries.append(' '.join(query))
-                    elif write is True:
-                        query.append(line)
+                    if i < self.queryLimit:
+                        line = line.strip()
+                        if line.startswith('Query string:'):
+                            write = True
+                            query = []
+                        elif line.startswith('Query result'):
+                            write = False
+                            queries.append(' '.join(query))
+                            i += 1
+                        elif write is True:
+                            query.append(line)
+                    else:
+                        break
 
         self.queries = queries
 
@@ -187,6 +198,12 @@ def parseArgs(args):
         default='run.log',
         help='The link where to find a bsbm run log benchmark')
 
+    parser.add_argument(
+        '-QL',
+        '--querylimit',
+        type=int,
+        help='The number of queries that should be executed.')
+
     return parser.parse_args()
 
 
@@ -199,7 +216,8 @@ if __name__ == '__main__':
         endpoint=args.endpoint,
         logDir=args.logdir,
         logFile=now + '_execution.log',
-        queryLog=args.querylog)
+        queryLog=args.querylog,
+        queryLimit=args.querylimit)
 
     mon = MonitorThread(logDir=args.logdir, logFile=now + '_memory.log')
 
