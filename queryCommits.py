@@ -59,16 +59,18 @@ class EvalCommits:
         print('Found {} commits. Interval will be {}'.format(len(commits.items()), str(self.interval)))
 
     def runBenchmark(self):
-        i = 0
-
-        for pos, ref in self.commits.items():
-            with open(self.logFile, 'a') as executionLog:
+        with open(self.logFile, 'a') as executionLog:
+            while True:
+                pos, ref = random.choice(list(self.commits.items()))
+                print('Was hab ich?', pos, ref)
                 if pos % self.interval == 0:
                     start, end = self.postRequest(ref)
                     data = [str(pos), str(end - start), str(start), str(end), str(ref)]
                     executionLog.write(' '.join(data) + '\n')
                     print(' '.join(data))
-                    i = i + 1
+                del self.commits[pos]
+                if len(self.commits.items()) == 0:
+                    return
 
     def postRequest(self, ref):
         start = datetime.datetime.now()
